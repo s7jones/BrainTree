@@ -9,15 +9,15 @@ namespace BrainTree
 class Composite : public Node
 {
 public:
+    Composite() : it(children.begin()) {}
     virtual ~Composite() {}
     
-    void add_child(Node* child) { children.push_back(child); }
-    bool has_children() const { return !children.empty(); }
-    int get_index() const { return index; }
+    void addChild(Node::Ptr child) { children.push_back(child); }
+    bool hasChildren() const { return !children.empty(); }
     
 protected:
-    std::vector<Node*> children;
-    int index = 0;
+    std::vector<Node::Ptr> children;
+    std::vector<Node::Ptr>::iterator it;
 };
 
 }

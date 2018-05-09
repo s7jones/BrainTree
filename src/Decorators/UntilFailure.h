@@ -2,11 +2,10 @@
 
 #include "../Decorator.h"
 
-namespace BrainTree
-{
+namespace BrainTree {
 
-// The UntilFail decorator repeats until the child returns fail and then returns success.
-class UntilFail : public Decorator
+// The UntilFailure decorator repeats until the child returns fail and then returns success.
+class UntilFailure : public Decorator
 {
 public:
     Status update() override
@@ -21,4 +20,4 @@ public:
     }
 };
 
-}
+} // BrainTree

@@ -9,76 +9,116 @@ Features
 * behavior tree
 * predefined composites
 * predefined decorators
-* rudimentary blackboard
+* (optional) rudimentary blackboard
+* (optional) behavior tree builders
 
 Install
 -------
 
-Include all files in src folder in your project.
+Include ```BrainTree.h``` in your project.
 
 Example
 -------
 
 ```c++
+// this example should print out "Hello, World!", six times
+#include <iostream>
 #include <BrainTree.h>
 
-class WaitNode : public BrainTree::Leaf
+class Action : public BrainTree::Node
 {
 public:
-    // note: using a blackboard is optional
-    WaitNode(BrainTree::Blackboard::Ptr board, int limit) : Leaf(board), limit(limit) {}
+    Action() {}
 
-    void Initialize() override
+    Status update() override
     {
-        counter = 0;
+        std::cout << "Hello, World!" << std::endl;
+
+        return Node::Status::Success;
     }
-
-    Status Update() override
-    {
-        counter++;
-        if (counter >= limit) {
-            return Node::Status::Success;
-        }
-
-        return Node::Status::Running;
-    }
-
-private:
-    int limit;
-    int counter;
 };
+
+void CreatingBehaviorTreeManually()
+{
+    BrainTree::BehaviorTree tree;
+    auto sequence = std::make_shared<BrainTree::Sequence>();
+    auto actionOne = std::make_shared<Action>();
+    auto actionTwo = std::make_shared<Action>();
+    auto actionThree = std::make_shared<Action>();
+    sequence.addChild(actionOne);
+    sequence.addChild(actionTwo);
+    sequence.addChild(actionThree);
+    tree.setRoot(sequence);
+    tree.update();
+}
+
+void CreatingBehaviorTreeUsingBuilders()
+{
+    auto tree = BrainTree::TreeBuilder()
+        .composite<BrainTree::Sequence>()
+            .leaf<Action>()
+            .leaf<Action>()
+            .leaf<Action>()
+        .end()
+        .build();
+    tree->update();
+}
 
 int main()
 {
-    BrainTree::BehaviorTree tree;
+    CreatingBehaviorTreeManually();
 
-    // each tree has one blackboard each, which the leafs can use
-    auto &blackboard = tree.GetBlackBoard();
-
-    // create a sequence
-    auto attackEnemySequence = std::make_shared<BrainTree::Sequence>();
-    auto targetNearestEnemyNode = std::make_shared<TargetNearestEnemyNode>(blackboard);
-    auto moveToEnemyNode = std::make_shared<MoveToEnemyNode>(blackboard);
-    auto attackEnemyNode = std::make_shared<AttackEnemyNode>(blackboard);
-    attackEnemySequence->AddChild(targetNearestEnemyNode);
-    attackEnemySequence->AddChild(moveToEnemyNode);
-    attackEnemySequence->AddChild(attackEnemyNode);
-
-    // ...
-
-    // create a selector
-    auto selector = std::make_shared<BrainTree::Selector>();
-    selector->AddChild(attackEnemySequence);
-    selector->AddChild(idleSequence);
-
-    // set the root of the tree
-    tree.SetRoot(selector);
-
-    // inside game loop
-    tree.Update();
+    CreatingBehaviorTreeUsingBuilders();
 
     return 0;
 }
+```
+
+Composites
+----------
+
+### Selector
+
+* The Selector composite ticks each child node in order.
+* If a child succeeds or runs, the selector returns the same status.
+* In the next tick, it will try to run each child in order again.
+* If all children fails, only then does the selector fail.
+
+### Sequence
+
+* The Sequence composite ticks each child node in order.
+* If a child fails or runs, the sequence returns the same status.
+* In the next tick, it will try to run each child in order again.
+* If all children succeeds, only then does the sequence succeed.
+
+### StatefulSelector
+
+* The StatefulSelector composite ticks each child node in order, and remembers what child it prevously tried to tick.
+* If a child succeeds or runs, the stateful selector returns the same status.
+* In the next tick, it will try to run the next child or start from the beginning again.
+* If all children fails, only then does the stateful selector fail.
+
+### StatefulSequence
+
+* The StatefulSequence composite ticks each child node in order, and remembers what child it prevously tried to tick.
+* If a child fails or runs, the stateful sequence returns the same status.
+* In the next tick, it will try to run the next child or start from the beginning again.
+* If all children succeeds, only then does the stateful sequence succeed.
+
+Builder
+-------
+
+The Builder class makes it easier to create a behavior tree. You use three methods to build your tree: `leaf<NodeType>()`, `composite<CompositeType>()` and `decorator<DecoratorType>()`. Both `composite()` and `decorator()` require a corresponding call to `end()`, this marks where you are done adding children to a composite or a child to a decorator. At the end you call `build()` which will then give you the finished behavior tree.
+
+```
+auto tree = Builder()
+    .decorator<Repeater>()
+        .composite<Sequence>()
+            .leaf<SayHello>("Foo")
+            .leaf<SayHello>("Bar")
+        .end()
+    .end()
+    .build();
 ```
 
 License
